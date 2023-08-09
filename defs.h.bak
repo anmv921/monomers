@@ -1,0 +1,26 @@
+#include <vector>
+#include <cmath>
+#include <random>
+#include <chrono>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <stdlib.h>
+#include <time.h>
+#include <stdio.h> 
+#include <algorithm>
+
+typedef long double real;
+
+#include "vectordefs.h"
+#include "prototypes.h"
+
+#define DO_CELL for (n = 0; n < Nmol; n ++)
+
+#define VWrap(v, t) \
+   if (v.t >= 0.5 * region.t)      v.t -= region.t; \
+   else if (v.t < -0.5 * region.t) v.t += region.t
+
+#define VWrapAll(v) \
+   {VWrap (v, x); \
+   VWrap (v, y);}

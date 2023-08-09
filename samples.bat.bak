@@ -1,0 +1,19 @@
+@echo off
+
+SET /A n = 10
+
+FOR /F %%i IN (seeds.txt) DO @echo %%i
+
+set /A j=0
+for /f %%a in (seeds.txt) do (
+	set /A j+=1
+	call echo %%j%%
+	call set array[%%j%%]=%%a
+	call set m=%%j%%
+)
+
+for /l %%x in (1, 1, %n%) do (
+	echo %%x
+)
+
+for /L %%k in (1,1,%m%) do call echo %%array[%%k]%%
