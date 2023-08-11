@@ -181,19 +181,19 @@ void InitCoords() {
 	real delta = L / (sqrt(NParticles));
 	int n = 0;
 	for (int i=0; i<sqrt(NMonomers); i++) {
-		for (int j=0; j<sqrt(NMonomers); j++) {
-			monomers[n].rho = r0, monomers[n].nMono = n;
-			monomers[n].r.x = ((real)i+0.5)*delta;
-			monomers[n].r.y = ((real)j+0.5)*delta;
+		for (int j=0; j<sqrt(NParticles); j++) {
+			particles[n].rho = r0, particles[n].nPart = n;
+			particles[n].r.x = ((real)i+0.5)*delta;
+			particles[n].r.y = ((real)j+0.5)*delta;
 			n++;
 		}
 	}
 	
 	n = 0;
-	DO_MONO {
-		monomers[n].r0.x = monomers[n].r.x;
+	DO_PART {
+		particles[n].r0.x = particles[n].r.x;
 		
-		monomers[n].r0.y = monomers[n].r.y;
+		particles[n].r0.y = particles[n].r.y;
 	}
 	
 	cout << "Fim da inicializacao das coordenadas" << endl;
@@ -203,14 +203,14 @@ void Init_F ()
 {
     int n;
 	DO_MONO {
-		VZero (monomers[n].fa);
-		VZero (monomers[n].fb);
+		VZero (particles[n].fa);
+		VZero (particles[n].fb);
 	};
 }
 
 void PrintSummary ()
 {	
-	ovito << NMonomers << endl;
+	ovito << NParticles << endl;
 	ovito << "Lattice=\""<<L<<" 0.0 0.0 0.0 "<<L<<" 0.0 0.0 0.0 0.0\" Origin=\""<<0<<" ";
 	ovito<<0<<" 0.0\"";
 	ovito << " Properties=pos:R:2:Radius:R:1:Type:S:1:Identifier:I:1:Pressure:R:1";
@@ -219,19 +219,19 @@ void PrintSummary ()
     int counter=0;
     for( counter=0; counter < NMonomers; counter++)
     {	
-		Monomer& mon = monomers[counter];
+		Particle& part = particles[counter];
 		
 		// Wrap periodic images
-		real x_img = mon.r.x;
+		real x_img = part.r.x;
 		//if (x_img > L ) x_img -= L;
 		//if (x_img < 0 ) x_img += L;
 		
-		real y_img = mon.r.y;
+		real y_img = part.r.y;
 		//if (y_img > L ) y_img -= L;
 		//if (y_img < 0 ) y_img += L;
 
 		ovito << x_img << "\t" <<  y_img << "\t" << mon.rho << \
-		 "\t" << "3" << "\t" << mon.nMono << "\t" << (mon.pa + mon.pb)/2.0  << "\t" << endl;
+		 "\t" << "3" << "\t" << part.nPart << "\t" << (part.pa + part.pb)/2.0  << "\t" << endl;
     }
 }
 
@@ -249,7 +249,7 @@ void ReadInput() {
 		config[strKey] = strValue;
 	}
 	
-	CNum(config["NMonomers"], NMonomers);
+	CNum(config["NMonomers"], NParticles);
 	CNum(config["dt"], dt);
 	CNum(config["D"], D);
 	CNum(config["T"], T);
