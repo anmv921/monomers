@@ -37,11 +37,11 @@ void SRK_Step(int stage);
 // *********************************************************************
 // Initalization of variables
 
-vector<Monomer> monomers;
+vector<Particle> particles;
 vector<string> inVars;
 real dt, D, timeNow, uSuma, uSumb, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, f2tdu2;
 int stepLimit, printStep, stepCount, moreCycles;
-int NMonomers; // Must have an even square - ex. 25, 36...
+int NParticles; // Must have an even square - ex. 25, 36...
 unsigned seed;
 ofstream ovito, propsDat;
 VecR W, reg;
