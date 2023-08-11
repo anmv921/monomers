@@ -1,12 +1,27 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
+#include <cmath>
+#include <random>
+#include <chrono>
+#include <sstream>
+#include <stdlib.h>
+#include <time.h>
+#include <stdio.h> 
+#include <algorithm>
+#include <map>
 
 using namespace std;
 
 #define NDIM  2
 
-#include "defs.h"
+typedef long double real;
+
+#include "vectors.h"
+#include "prototypes.h"
+
+#define DO_MONO for (n = 0; n < N; n ++)
 
 typedef struct {
     VecR r, R, fa, fb, r0;
