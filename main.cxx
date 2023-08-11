@@ -21,17 +21,17 @@ typedef long double real;
 #include "vectors.h"
 #include "prototypes.h"
 
-#define DO_MONO for (n = 0; n < N; n ++)
+#define DO_PART for (n = 0; n < N; n ++)
 
 typedef struct {
     VecR r, R, fa, fb, r0;
-    int nMono;
+    int nPart;
     real rho; // radius
     real pa, pb; // pressure
     real f2, du2;
-} Monomer;
+} Particle;
 
-void pairForce(Mono& m1, Mono& m2, int stage);
+void pairForce(Particle& p1, Particle& p2, int stage);
 void SRK_Step(int stage);
 
 // *********************************************************************
