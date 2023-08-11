@@ -119,7 +119,7 @@ void SetupJob ()
 void AllocArrays ()
 {	
 	cout << "A allocar os arrays" << endl;
-	monomers.resize(NMonomers);
+	particles.resize(NParticles);
 	cout << "Arrays allocados" << endl;
 }
 
@@ -134,7 +134,7 @@ void AllocArrays ()
 void CBD_Step ()
 {
     int n;
-	DO_MONO {
+	DO_PART {
 		GenerateNoise( W, sqrt(2*dt*D) );
 		//RStep( monomers[n].r, monomers[n].f, W);
 	}
@@ -146,27 +146,27 @@ void SRK_Step (int stage)
 	switch(stage) {
 		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		case 1: {
-			DO_MONO {
+			DO_PART {
 				GenerateNoise( W, sqrt(2*dt*D) );
-				monomers[n].R.x = monomers[n].r.x;
-				monomers[n].R.y = monomers[n].r.y;
-				RStep( monomers[n].R, monomers[n].fa, W );
+				particles[n].R.x = particles[n].r.x;
+				particles[n].R.y = particles[n].r.y;
+				RStep( particles[n].R, particles[n].fa, W );
 				//cout << monomers[n].R.x << " | " << monomers[n].R.y << endl;
 			}
 			break;
 		}
 		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		case 2: {
-			DO_MONO {
+			DO_PART {
 				GenerateNoise( W, sqrt(2*dt*D) );
 				
 				VecR vec_f;
-				vec_f.x = (monomers[n].fa.x + monomers[n].fb.x) / 2.0;
-				vec_f.y = (monomers[n].fa.y + monomers[n].fb.y) / 2.0;
+				vec_f.x = (particles[n].fa.x + particles[n].fb.x) / 2.0;
+				vec_f.y = (particles[n].fa.y + particles[n].fb.y) / 2.0;
 				
-				monomers[n].f2 = DotProd(vec_f, vec_f);
+				particles[n].f2 = DotProd(vec_f, vec_f);
 				
-				RStep( monomers[n].r, vec_f, W );
+				RStep( particles[n].r, vec_f, W );
 			}
 			break;
 		}
@@ -178,7 +178,7 @@ void SRK_Step (int stage)
 	(double)rand() / RAND_MAX
 	
 void InitCoords() {
-	real delta = L / (sqrt(NMonomers));
+	real delta = L / (sqrt(NParticles));
 	int n = 0;
 	for (int i=0; i<sqrt(NMonomers); i++) {
 		for (int j=0; j<sqrt(NMonomers); j++) {
