@@ -40,7 +40,7 @@ void SRK_Step(int stage);
 vector<Particle> particles;
 // vector<string> inVars;
 real dt, D, timeNow, uSum, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, f2tdu2;
-int stepLimit, printStep, stepCount, moreCycles;
+int stepLimit, stepSample, stepCount, moreCycles;
 int numParticles; // Must have an even square - ex. 25, 36...
 unsigned seed;
 ofstream ovito, propsDat;
@@ -95,7 +95,7 @@ void SingleStep ()
     computeForces(2);
     SRK_Step(2);
 	
-    if (stepCount % printStep == 0) {
+    if (stepCount % stepSample == 0) {
         PrintSummary ();
         writeProps();
     }
@@ -251,25 +251,19 @@ void ReadInput() {
 	while (infile >> strKey >> strValue) {
 		config[strKey] = strValue;
 	}
-	
-	CNum(config["NMonomers"], numParticles);
-	CNum(config["dt"], dt);
-	CNum(config["D"], D);
-	CNum(config["T"], T);
-	CNum(config["r0"], r0);
+	// numCellsPerDim -> sqrt(numParticles)
+	CNum(config["N"], numParticles);
+	CNum(config["dt"], dt); // Time step
+	CNum(config["D"], D); // Diffusion constant
+	CNum(config["T"], T); // Temperature
+	CNum(config["r0"], r0); // radius of particles
 	CNum(config["stepLimit"], stepLimit);
-	CNum(config["sampleStep"], printStep);
+	CNum(config["sampleStep"], stepSample);
 	CNum(config["seed"], seed);
-	CNum(config["lambda"], lambda);
-	CNum(config["V0"], V0);
-	CNum(config["L"], L);
-	CNum(config["rcut"], rcut);
-	
-	/*
-	cout << numParticles << "|" << dt << "|" << D << "|" << \
-	T << "|" << r0 << "|" << stepLimit << "|" << printStep << "|" << seed << "|" << \
-	lambda << "|" << V0 << "|" << L << "|" << rcut << endl
-	*/
+	CNum(config["lambda"], lambda); // Yukawa parameter
+	CNum(config["V0"], V0); // Yukawa parameter
+	CNum(config["L"], L); // Simulation domain lateral size
+	CNum(config["rcut"], rcut); // Cutoff radius
 	
 	//cout << D << endl;
 	
