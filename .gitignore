@@ -1,3 +1,10 @@
 data/
 *.ipynb
 *.bak
+main.exe
+seed_seq.exe
+tests/*.exe
+ovito.xyz
+props.txt
+time.txt
+seeds.txt

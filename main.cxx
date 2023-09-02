@@ -57,9 +57,14 @@ int main(int argc, char **argv)
 	auto start = chrono::steady_clock::now();
 	cout << "Inicio do programa" << endl;
     ReadInput ();
+    
     cout << "Input lido" << endl;
     SetupJob ();
+    
+    //cout << D << endl;
+    
     cout << "Setup finalizado. A executar o ciclo principal" << endl;
+    PrintSummary ();
     
     moreCycles = 1;
     PrintSummary ();
@@ -117,7 +122,6 @@ void SetupJob ()
 
 void AllocArrays ()
 {	
-	cout << "A allocar os arrays" << endl;
 	particles.resize(numParticles);
 	cout << "Arrays allocados" << endl;
 }
@@ -261,13 +265,16 @@ void ReadInput() {
 	CNum(config["L"], L);
 	CNum(config["rcut"], rcut);
 	
+	/*
 	cout << numParticles << "|" << dt << "|" << D << "|" << \
 	T << "|" << r0 << "|" << stepLimit << "|" << printStep << "|" << seed << "|" << \
-	lambda << "|" << V0 << "|" << L << "|" << rcut << endl;
+	lambda << "|" << V0 << "|" << L << "|" << rcut << endl
+	*/
+	
+	cout << D << endl;
 	
 	infile.close();
-	
-	//config.~map();
+	config.clear();
 	
 	cout << "Input lido" << endl;
 }
