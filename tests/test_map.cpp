@@ -5,7 +5,8 @@
 using namespace std;
 
 int main() {
-	ifstream infile("params.in");
+	cout << "teste" << endl;
+	ifstream infile("C:\\Users\\andriy\\Desktop\\monomers-git\\monomers\\params.in");
 	
 	string strKey, strValue;
 	
@@ -16,6 +17,8 @@ int main() {
 	}
 	for (map<string, string>::iterator it=config.begin(); it!=config.end(); ++it)
 		cout << it->first << " => " << it->second << '\n';
+	
+	return 0;
 }
 
 

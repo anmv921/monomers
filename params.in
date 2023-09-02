@@ -9,4 +9,5 @@ V0	1.0
 L	20
 rcut	3
 seed	123442
-N	121
+N	4
+numCellsPerDim	2

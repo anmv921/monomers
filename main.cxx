@@ -21,13 +21,13 @@ typedef long double real;
 #include "vectors.h"
 #include "prototypes.h"
 
-#define DO_PART for (n = 0; n < N; n ++)
+#define DO_PART for (n = 0; n < numParticles; n ++)
 
 typedef struct {
     VecR r, R, fa, fb, r0;
     int nPart;
     real rho; // radius
-    real pa, pb; // pressure
+    real p; // pressure
     real f2, du2;
 } Particle;
 
@@ -38,10 +38,10 @@ void SRK_Step(int stage);
 // Initalization of variables
 
 vector<Particle> particles;
-vector<string> inVars;
-real dt, D, timeNow, uSuma, uSumb, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, f2tdu2;
+// vector<string> inVars;
+real dt, D, timeNow, uSum, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, f2tdu2;
 int stepLimit, printStep, stepCount, moreCycles;
-int NParticles; // Must have an even square - ex. 25, 36...
+int numParticles; // Must have an even square - ex. 25, 36...
 unsigned seed;
 ofstream ovito, propsDat;
 VecR W, reg;
@@ -106,8 +106,7 @@ void SetupJob ()
     VZero(W);
     ovito.open("ovito.xyz");
     timeNow = 0.0;
-    uSuma = 0.0;
-    uSumb = 0.0;
+    uSum = 0.0;
     stepCount = 0;
     propsDat.open("props.txt");
     writePropsHeader();
@@ -119,7 +118,7 @@ void SetupJob ()
 void AllocArrays ()
 {	
 	cout << "A allocar os arrays" << endl;
-	particles.resize(NParticles);
+	particles.resize(numParticles);
 	cout << "Arrays allocados" << endl;
 }
 
@@ -178,10 +177,10 @@ void SRK_Step (int stage)
 	(double)rand() / RAND_MAX
 	
 void InitCoords() {
-	real delta = L / (sqrt(NParticles));
+	real delta = L / (sqrt(numParticles));
 	int n = 0;
-	for (int i=0; i<sqrt(NMonomers); i++) {
-		for (int j=0; j<sqrt(NParticles); j++) {
+	for (int i=0; i<sqrt(numParticles); i++) {
+		for (int j=0; j<sqrt(numParticles); j++) {
 			particles[n].rho = r0, particles[n].nPart = n;
 			particles[n].r.x = ((real)i+0.5)*delta;
 			particles[n].r.y = ((real)j+0.5)*delta;
@@ -202,7 +201,7 @@ void InitCoords() {
 void Init_F ()
 {
     int n;
-	DO_MONO {
+	DO_PART {
 		VZero (particles[n].fa);
 		VZero (particles[n].fb);
 	};
@@ -210,14 +209,14 @@ void Init_F ()
 
 void PrintSummary ()
 {	
-	ovito << NParticles << endl;
+	ovito << numParticles << endl;
 	ovito << "Lattice=\""<<L<<" 0.0 0.0 0.0 "<<L<<" 0.0 0.0 0.0 0.0\" Origin=\""<<0<<" ";
 	ovito<<0<<" 0.0\"";
 	ovito << " Properties=pos:R:2:Radius:R:1:Type:S:1:Identifier:I:1:Pressure:R:1";
 	ovito << " t=" << timeNow << endl;
 	
     int counter=0;
-    for( counter=0; counter < NMonomers; counter++)
+    for( counter=0; counter < numParticles; counter++)
     {	
 		Particle& part = particles[counter];
 		
@@ -230,8 +229,8 @@ void PrintSummary ()
 		//if (y_img > L ) y_img -= L;
 		//if (y_img < 0 ) y_img += L;
 
-		ovito << x_img << "\t" <<  y_img << "\t" << mon.rho << \
-		 "\t" << "3" << "\t" << part.nPart << "\t" << (part.pa + part.pb)/2.0  << "\t" << endl;
+		ovito << x_img << "\t" <<  y_img << "\t" << part.rho << \
+		 "\t" << "3" << "\t" << part.nPart << "\t" << part.p  << "\t" << endl;
     }
 }
 
@@ -249,7 +248,7 @@ void ReadInput() {
 		config[strKey] = strValue;
 	}
 	
-	CNum(config["NMonomers"], NParticles);
+	CNum(config["NMonomers"], numParticles);
 	CNum(config["dt"], dt);
 	CNum(config["D"], D);
 	CNum(config["T"], T);
@@ -262,7 +261,7 @@ void ReadInput() {
 	CNum(config["L"], L);
 	CNum(config["rcut"], rcut);
 	
-	cout << NMonomers << "|" << dt << "|" << D << "|" << \
+	cout << numParticles << "|" << dt << "|" << D << "|" << \
 	T << "|" << r0 << "|" << stepLimit << "|" << printStep << "|" << seed << "|" << \
 	lambda << "|" << V0 << "|" << L << "|" << rcut << endl;
 	
@@ -280,7 +279,7 @@ void writePropsHeader() {
 
 void writeProps() {
 	averageProps();
-	propsDat << timeNow << "\t" << (uSuma + uSumb) / (2*NMonomers) << "\t" <<  P << "\t" << msd << \
+	propsDat << timeNow << "\t" << (uSum) / (numParticles) << "\t" <<  P << "\t" << msd << \
 	"\t" << sigmaxy << "\t" << f2tdu2 << endl;
 }
 
@@ -291,20 +290,20 @@ void averageProps() {
 	real f2sum = 0;
 	real du2sum = 0;
 	f2tdu2 = 0;
-	DO_MONO {
-		P += (monomers[n].pa + monomers[n].pb)/2;
+	DO_PART {
+		P += (particles[n].p);
 		
 		VecR vec_d;
-		SubtractVectors(vec_d, monomers[n].r, monomers[n].r0);
+		SubtractVectors(vec_d, particles[n].r, particles[n].r0);
 		
 		msd += DotProd(vec_d, vec_d);
 		
-		f2sum += monomers[n].f2;
-		du2sum += monomers[n].du2;
+		f2sum += particles[n].f2;
+		du2sum += particles[n].du2;
 	 }
-	 P = T*NMonomers/(L*L) + P / (L*L*NDIM*NMonomers);
-	 msd /= NMonomers;
-	 f2tdu2 = (f2sum/NMonomers) - T*du2sum/NMonomers;
+	 P = T*numParticles/(L*L) + P / (L*L*NDIM*numParticles);
+	 msd /= numParticles;
+	 f2tdu2 = (f2sum/numParticles) - T*du2sum/numParticles;
 }
 
 void PrintElapsedTime(chrono::steady_clock::time_point start) {
@@ -340,17 +339,17 @@ void computeForces(int stage) {
 		case 1:
 		{	
 			sigmaxy = 0.0;
-			DO_MONO {
-				VZero (monomers[n].fa);
-				monomers[n].pa = 0;
-				monomers[n].du2 = 0.0;
-				monomers[n].f2 = 0.0;
+			DO_PART {
+				VZero (particles[n].fa);
+				particles[n].p = 0;
+				particles[n].du2 = 0.0;
+				particles[n].f2 = 0.0;
 			}
-			uSuma = 0.;
+			uSum = 0.;
 			
-			for (i = 0; i < NMonomers; i++) {
-				for (j = i + 1; j < NMonomers-1; j++) {
-					pairForce(monomers[i], monomers[j], 1);
+			for (i = 0; i < numParticles; i++) {
+				for (j = i + 1; j < numParticles-1; j++) {
+					pairForce(particles[i], particles[j], 1);
 				}
 			}
 			break;
@@ -358,15 +357,15 @@ void computeForces(int stage) {
 		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		case 2:
 		{	
-			DO_MONO {
-				VZero (monomers[n].fb);
-				monomers[n].pb = 0;
+			DO_PART {
+				VZero (particles[n].fb);
+				particles[n].p = 0;
 			}
-			uSumb = 0.;
+			uSum = 0.;
 			
-			for (i = 0; i < NMonomers; i++) {
-				for (j = i + 1; j < NMonomers-1; j++) {
-					pairForce(monomers[i], monomers[j], 2);
+			for (i = 0; i < numParticles; i++) {
+				for (j = i + 1; j < numParticles-1; j++) {
+					pairForce(particles[i], particles[j], 2);
 				}
 			}
 		}
@@ -392,7 +391,7 @@ void computeForces(int stage) {
 	VecF.y = FF * VecN.y
 
 // =====================================================================
-void pairForce(Monomer& mon1, Monomer& mon2, int stage) {
+void pairForce(Particle& par1, Particle& par2, int stage) {
 	// TODO remove switch use args mon.r, mon.R
 	VecR vec_dr, vec_f12, vec_n;
 	real F = 0.0;
@@ -401,7 +400,7 @@ void pairForce(Monomer& mon1, Monomer& mon2, int stage) {
 		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		case 1:
 		{
-			GetVecDr(vec_dr, mon1.r, mon2.r);
+			GetVecDr(vec_dr, par1.r, par2.r);
 			ApplyPBC(vec_dr);
 			dr = Norm(vec_dr.x, vec_dr.y);
 			GetVecN(vec_n, vec_dr, dr);
@@ -414,25 +413,25 @@ void pairForce(Monomer& mon1, Monomer& mon2, int stage) {
 				V = 0.0;
 				F = 0.0;
 			}
-			uSuma += V;
+			uSum += V;
 			GetVecF(vec_f12, F, vec_n);
 			
-			AddForce(mon1.fa, vec_f12.x, vec_f12.y);
-			AddForce(mon2.fa, -vec_f12.x, -vec_f12.y);
+			AddForce(par1.fa, vec_f12.x, vec_f12.y);
+			AddForce(par2.fa, -vec_f12.x, -vec_f12.y);
 			
 			// Virial pressure
-			mon1.pa += DotProd(vec_f12, vec_dr); //
-			mon2.pa += DotProd(vec_f12, vec_dr); // minus signs in force and dr cancel
+			par1.p += DotProd(vec_f12, vec_dr); //
+			par2.p += DotProd(vec_f12, vec_dr); // minus signs in force and dr cancel
 			
 			sigmaxy +=  vec_dr.x * vec_f12.y / 4.0;
 			
-			mon1.du2 += 0.5 * V * ( 2/(dr*dr) + 2*lambda/dr + lambda*lambda );
+			par1.du2 += 0.5 * V * ( 2/(dr*dr) + 2*lambda/dr + lambda*lambda );
 			
 			break;
 		}
 		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		case 2: {
-			GetVecDr(vec_dr, mon1.R, mon2.R);
+			GetVecDr(vec_dr, par1.R, par2.R);
 			ApplyPBC(vec_dr);
 			dr = Norm(vec_dr.x, vec_dr.y);
 			GetVecN(vec_n, vec_dr, dr);
@@ -445,20 +444,20 @@ void pairForce(Monomer& mon1, Monomer& mon2, int stage) {
 				V = 0.0;
 				F = 0.0;
 			}
-			uSumb += V;
+			uSum += V;
 			GetVecF(vec_f12, F, vec_n);
 			
-			AddForce(mon1.fb, vec_f12.x, vec_f12.y);
-			AddForce(mon2.fb, -vec_f12.x, -vec_f12.y);
+			AddForce(par1.fb, vec_f12.x, vec_f12.y);
+			AddForce(par2.fb, -vec_f12.x, -vec_f12.y);
 			
 			// Virial pressure
-			mon1.pb += DotProd(vec_f12, vec_dr); // or is it vec_n
-			mon2.pb += DotProd(vec_f12, vec_dr); // minus signs in force and dr cancel
+			par1.p += DotProd(vec_f12, vec_dr); // or is it vec_n
+			par2.p += DotProd(vec_f12, vec_dr); // minus signs in force and dr cancel
 			
 			sigmaxy +=  vec_dr.x * vec_f12.y / 4.0;
 			
 			
-			mon1.du2 += 0.5 * V * ( 2/(dr*dr) + 2*lambda/dr + lambda*lambda );
+			par1.du2 += 0.5 * V * ( 2/(dr*dr) + 2*lambda/dr + lambda*lambda );
 			
 			break;
 		}
