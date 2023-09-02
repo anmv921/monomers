@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     cout << "Input lido" << endl;
     SetupJob ();
     
-    //cout << D << endl;
+    cout << D << endl;
     
     cout << "Setup finalizado. A executar o ciclo principal" << endl;
     PrintSummary ();
@@ -271,7 +271,7 @@ void ReadInput() {
 	lambda << "|" << V0 << "|" << L << "|" << rcut << endl
 	*/
 	
-	cout << D << endl;
+	//cout << D << endl;
 	
 	infile.close();
 	config.clear();
