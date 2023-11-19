@@ -15,6 +15,7 @@
 using namespace std;
 
 #define NDIM  2
+#define ALGORITHM "VERLET"
 
 typedef long double real;
 
@@ -24,30 +25,34 @@ typedef long double real;
 #define DO_PART for (n = 0; n < numParticles; n ++)
 
 typedef struct {
-    VecR r, R, fa, fb, r0;
+    VecR r, R, fa, fb, r0, vel, rp; // rp is previous position
     int nPart;
     real rho; // radius
     real p; // pressure
-    real f2, du2;
+    real f2, d2u;
 } Particle;
 
 void pairForce(Particle& p1, Particle& p2, int stage);
 void SRK_Step(int stage);
+void InitVelocities();
+void VerletStep();
 
 // *********************************************************************
 // Initalization of variables
 
 vector<Particle> particles;
-// vector<string> inVars;
-real dt, D, timeNow, uSum, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, f2tdu2;
+real dt, D, timeNow, uSum, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, f2tdu2, ekSum;
 int stepLimit, stepSample, stepCount, moreCycles;
-int numParticles; // Must have an even square - ex. 25, 36...
+int numParticles; // Must have an even square - ex. 25, 36, and so on
 unsigned seed;
 ofstream ovito, propsDat;
 VecR W, reg;
 
 mt19937 generator;
 normal_distribution<real> distribution(0.0, 1.0);
+
+uniform_real_distribution<double> uniformDistribution(0.0, 1.0);
+
 
 // *********************************************************************
 // 
@@ -90,10 +95,15 @@ void SingleStep ()
     ++stepCount;
     timeNow = stepCount * dt;
     
-    computeForces(1);
-    SRK_Step(1);
-    computeForces(2);
-    SRK_Step(2);
+    if {ALGORITHM == "VERLET"} {
+		computeForces(1);
+	} 
+	else {
+		computeForces(1);
+		SRK_Step(1);
+		computeForces(2);
+		SRK_Step(2);
+	}
 	
     if (stepCount % stepSample == 0) {
         PrintSummary ();
@@ -112,11 +122,16 @@ void SetupJob ()
     ovito.open("ovito.xyz");
     timeNow = 0.0;
     uSum = 0.0;
+    ekSum = 0.0;
     stepCount = 0;
     propsDat.open("props.txt");
     writePropsHeader();
     generator = mt19937(seed);
     f2tdu2 = 0.0;
+    
+    if (ALGORITHM == "VERLET") InitVelocities();
+    
+    
     cout << "Workflow inicializado" << endl;
 }
 
@@ -134,12 +149,30 @@ void AllocArrays ()
 	(ww).x = distribution(generator) * s, \
 	(ww).y = distribution(generator) * s
 
+void InitVelocities() {
+	int n;
+	DO_PART {
+		particles[n].vel = uniformDistribution(generator) - 0.5;
+	}
+}
+
+
 void CBD_Step ()
 {
     int n;
 	DO_PART {
 		GenerateNoise( W, sqrt(2*dt*D) );
-		//RStep( monomers[n].r, monomers[n].f, W);
+		//RStep( particles[n].r, particles[n].f, W);
+	}
+}
+
+void VerletStep() {
+	int n;
+	ekSum = 0.0;
+	DO_PART {
+		real xtemp = particles[n].r.x + particles[n].vel.x*dt + dt*dt*particles[n].fa.x/(2*m);
+		//particles[n].r.x += 
+		//(D/T) * (ff).x * dt + (ww.x)
 	}
 }
 
@@ -154,7 +187,6 @@ void SRK_Step (int stage)
 				particles[n].R.x = particles[n].r.x;
 				particles[n].R.y = particles[n].r.y;
 				RStep( particles[n].R, particles[n].fa, W );
-				//cout << monomers[n].R.x << " | " << monomers[n].R.y << endl;
 			}
 			break;
 		}
@@ -393,7 +425,6 @@ void computeForces(int stage) {
 
 // =====================================================================
 void pairForce(Particle& par1, Particle& par2, int stage) {
-	// TODO remove switch use args mon.r, mon.R
 	VecR vec_dr, vec_f12, vec_n;
 	real F = 0.0;
 	real V, dr;
