@@ -8,7 +8,7 @@ void ReadInput ();
 void writeProps();
 void feneForce ();
 void InitCoords ();
-void computeForces (int stage);
+void computeForces (int in_stage);
 void PrintElapsedTime(chrono::steady_clock::time_point start);
 void writePropsHeader();
 void averageProps();

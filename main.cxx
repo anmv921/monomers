@@ -20,7 +20,7 @@ using namespace std;
 
 typedef long double real;
 
-#include "vectors.h" // TODO Mudar isto para "macros.h"
+#include "vectors.h"
 #include "prototypes.h"
 
 #define DO_PART for (n = 0; n < numParticles; n ++)
@@ -31,18 +31,20 @@ typedef struct {
     real radius;
     real pressure;
     real f2, ddu; // duu is d^2[U]/dr^2
+	real mass;
 } Particle;
 
-void pairForce(Particle& p1, Particle& p2, int stage);
+void pairForce(Particle& p1, Particle& p2, int in_stage);
 void SRK_Step(int stage);
 void InitVelocities();
 void VerletStep();
+void InitMasses();
 
 // **************************
 // Initalization of variables
 
 vector<Particle> particles;
-real dt, D, timeNow, uSum, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, f2tdu2, ekSum;
+real dt, D, timeNow, uSum, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, ekSum, f2Med, dduMed;
 int stepLimit, stepSample, stepCount, moreCycles;
 int numParticles; // Must have an even square - ex. 25, 36, and so on. Best use powers of 2
 unsigned seed;
@@ -113,7 +115,7 @@ void SingleStep ()
 void SetupJob ()
 {	
 	cout << "A inicializar o workflow" << endl;
-    AllocArrays ();
+    AllocArrays();
     stepCount = 0;
     InitCoords();
     Init_F();
@@ -126,9 +128,11 @@ void SetupJob ()
     propsDat.open("props.txt");
     writePropsHeader();
     generator = mt19937(seed);
-    f2tdu2 = 0.0;
+    //f2tdu2 = 0.0;
     
     if (ALGORITHM == "VERLET") InitVelocities();
+
+	InitMasses();
     
     
     cout << "Workflow inicializado" << endl;
@@ -156,6 +160,13 @@ void InitVelocities() {
 	}
 }
 
+void InitMasses() {
+	int n;
+	DO_PART {
+		particles[n].mass = 1;
+	}
+}
+
 
 void CBD_Step ()
 {
@@ -171,7 +182,7 @@ void VerletStep() {
 	ekSum = 0.0;
 	DO_PART {
 		real xtemp = particles[n].r.x 
-		+ particles[n].vel.x*dt + dt*dt*particles[n].fa.x/(2*m);
+		+ particles[n].vel.x*dt + ( (particles[n].fa.x) / (2*m) ) * dt*dt;
 		//particles[n].r.x += 
 		//(D/T) * (ff).x * dt + (ww.x)
 	}
@@ -314,7 +325,7 @@ void writePropsHeader() {
 void writeProps() {
 	averageProps();
 	propsDat << timeNow << "\t" << (uSum) / (numParticles) << "\t" <<  P << "\t" << msd << \
-	"\t" << sigmaxy << "\t" << f2tdu2 << endl;
+	"\t" << sigmaxy << "\t" << f2Med << endl;
 }
 
 void averageProps() {
@@ -323,7 +334,7 @@ void averageProps() {
 	msd = 0;
 	real f2sum = 0;
 	real du2sum = 0;
-	f2tdu2 = 0;
+	f2Med = 0;
 	DO_PART {
 		P += (particles[n].pressure);
 		
@@ -337,7 +348,7 @@ void averageProps() {
 	 }
 	 P = T*numParticles/(L*L) + P / (L*L*NDIM*numParticles);
 	 msd /= numParticles;
-	 f2tdu2 = (f2sum/numParticles) - T*du2sum/numParticles;
+	 f2Med = (f2sum/numParticles) - T*du2sum/numParticles;
 }
 
 void PrintElapsedTime(chrono::steady_clock::time_point start) {
