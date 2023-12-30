@@ -1,6 +1,8 @@
 #ifndef V_DEFS
 #define V_DEFS
 
+typedef long double real;
+
 typedef struct {
 	real x, y;
 } VecR;

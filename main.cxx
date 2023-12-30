@@ -18,9 +18,7 @@ using namespace std;
 #define NDIM  2
 #define ALGORITHM "VERLET"
 
-typedef long double real;
-
-#include "vectors.h"
+#include "helperMacros.h"
 #include "prototypes.h"
 
 #define DO_PART for (n = 0; n < numParticles; n ++)
@@ -128,7 +126,7 @@ void SetupJob ()
     propsDat.open("props.txt");
     writePropsHeader();
     generator = mt19937(seed);
-    //f2tdu2 = 0.0;
+    f2Med = 0.0;
     
     if (ALGORITHM == "VERLET") InitVelocities();
 
@@ -229,6 +227,7 @@ void SRK_Step (int stage)
 }
 
 void InitCoords() {
+	// TODO Colocar isto a funcionar com qualquer num de particulas
 	real delta = L / (sqrt(numParticles));
 	int n = 0;
 	for (int i=0; i<sqrt(numParticles); i++) {
@@ -268,16 +267,20 @@ void PrintSummary ()
 	ovito << " t=" << timeNow << endl;
 	
     int counter=0;
-    for( counter=0; counter < numParticles; counter++)
+    for( counter=0; counter < numParticles; counter++ )
     {	
 		Particle& part = particles[counter];
 		
-		// Wrap periodic images
+		
 		real x_img = part.r.x;
+		real y_img = part.r.y;
+
+		// TODO escrever varias copias das partículas a volta das particulas
+		// somando +-L, cores diferentes
+
+		// Wrap periodic images
 		//if (x_img > L ) x_img -= L;
 		//if (x_img < 0 ) x_img += L;
-		
-		real y_img = part.r.y;
 		//if (y_img > L ) y_img -= L;
 		//if (y_img < 0 ) y_img += L;
 
