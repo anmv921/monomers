@@ -16,8 +16,8 @@ typedef struct {
 #define Dist(x, y) \
 	sqrt(x*x + y*y)
 	
-#define Norm(dx, dy) \
-	sqrt(dx*dx + dy*dy)
+#define Norm(x, y) \
+	sqrt(y*y + y*y)
 	
 #define DotProd(v1, v2) \
 	(v1).x * (v2).x + (v1).y * (v2).y
@@ -40,6 +40,21 @@ typedef struct {
 	vv.x = vv1.x - vv2.x, \
 	vv.y = vv1.y - vv2.y
 
+#define GetVecDr(VecDr, RR1, RR2) \
+	VecDr.x = RR1.x - RR2.x, \
+	VecDr.y = RR1.y - RR2.y
+
+#define ApplyPBC(rr) \
+	(rr).x -= L * round(rr.x/L), \
+	(rr).y -= L * round(rr.y/L)
+
+#define GetVecN(VecN, VecDr, Dr) \
+	VecN.x = VecDr.x/Dr, \
+	VecN.y = VecDr.y/Dr
+	
+#define GetVecF(VecF, FF, VecN) \
+	VecF.x = FF * VecN.x, \
+	VecF.y = FF * VecN.y
 
 #endif
 
