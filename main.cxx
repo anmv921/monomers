@@ -25,11 +25,11 @@ typedef long double real;
 #define DO_PART for (n = 0; n < numParticles; n ++)
 
 typedef struct {
-    VecR r, R, fa, fb, r0, vel, rp; // rp is previous position
+    VecR r, rTest, fa, fb, r0, vel, rPrevious;
     int nPart;
-    real rho; // radius
-    real p; // pressure
-    real f2, ddu;
+    real radius;
+    real pressure;
+    real f2, ddu; // duu is d^2[U]/dr^2
 } Particle;
 
 void pairForce(Particle& p1, Particle& p2, int stage);
@@ -37,13 +37,13 @@ void SRK_Step(int stage);
 void InitVelocities();
 void VerletStep();
 
-// *********************************************************************
+// **************************
 // Initalization of variables
 
 vector<Particle> particles;
 real dt, D, timeNow, uSum, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, f2tdu2, ekSum;
 int stepLimit, stepSample, stepCount, moreCycles;
-int numParticles; // Must have an even square - ex. 25, 36, and so on
+int numParticles; // Must have an even square - ex. 25, 36, and so on. Best use powers of 2
 unsigned seed;
 ofstream ovito, propsDat;
 VecR W, reg;
@@ -54,9 +54,7 @@ normal_distribution<real> distribution(0.0, 1.0);
 uniform_real_distribution<double> uniformDistribution(0.0, 1.0);
 
 
-// *********************************************************************
-// 
-
+// ****************************
 int main(int argc, char **argv)
 {	
 	auto start = chrono::steady_clock::now();
@@ -87,7 +85,7 @@ int main(int argc, char **argv)
     PrintElapsedTime(start);
 }
 
-// *********************************************************************
+// *********
 // Functions
 
 void SingleStep ()
@@ -95,7 +93,7 @@ void SingleStep ()
     ++stepCount;
     timeNow = stepCount * dt;
     
-    if {ALGORITHM == "VERLET"} {
+    if (ALGORITHM == "VERLET") {
 		computeForces(1);
 	} 
 	else {
@@ -181,7 +179,7 @@ void SRK_Step (int stage)
 {	
 	int n;
 	switch(stage) {
-		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		// ++++++++
 		case 1: {
 			DO_PART {
 				GenerateNoise( W, sqrt(2*dt*D) );
@@ -191,7 +189,7 @@ void SRK_Step (int stage)
 			}
 			break;
 		}
-		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		// ++++++++
 		case 2: {
 			DO_PART {
 				GenerateNoise( W, sqrt(2*dt*D) );
@@ -206,7 +204,7 @@ void SRK_Step (int stage)
 			}
 			break;
 		}
-		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		// ++++++++
 	}
 }
 
@@ -218,7 +216,7 @@ void InitCoords() {
 	int n = 0;
 	for (int i=0; i<sqrt(numParticles); i++) {
 		for (int j=0; j<sqrt(numParticles); j++) {
-			particles[n].rho = r0, particles[n].nPart = n;
+			particles[n].radius = r0, particles[n].nPart = n;
 			particles[n].r.x = ((real)i+0.5)*delta;
 			particles[n].r.y = ((real)j+0.5)*delta;
 			n++;
@@ -266,7 +264,7 @@ void PrintSummary ()
 		//if (y_img > L ) y_img -= L;
 		//if (y_img < 0 ) y_img += L;
 
-		ovito << x_img << "\t" <<  y_img << "\t" << part.rho << \
+		ovito << x_img << "\t" <<  y_img << "\t" << part.radius << \
 		 "\t" << "3" << "\t" << part.nPart << "\t" << part.p  << "\t" << endl;
     }
 }
@@ -365,18 +363,18 @@ void PrintElapsedTime(chrono::steady_clock::time_point start) {
 }
 
 
-// =====================================================================
+// ============================
 void computeForces(int stage) { 
 	int n, j, i;
 	switch(stage) {
-		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		// ++++++++
 		case 1:
 		{	
 			sigmaxy = 0.0;
 			DO_PART {
 				VZero (particles[n].fa);
 				particles[n].p = 0;
-				particles[n].du2 = 0.0;
+				particles[n].dduu = 0.0;
 				particles[n].f2 = 0.0;
 			}
 			uSum = 0.;
