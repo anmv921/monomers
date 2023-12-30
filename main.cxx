@@ -29,7 +29,7 @@ typedef struct {
     int nPart;
     real rho; // radius
     real p; // pressure
-    real f2, d2u;
+    real f2, ddu;
 } Particle;
 
 void pairForce(Particle& p1, Particle& p2, int stage);
@@ -170,7 +170,8 @@ void VerletStep() {
 	int n;
 	ekSum = 0.0;
 	DO_PART {
-		real xtemp = particles[n].r.x + particles[n].vel.x*dt + dt*dt*particles[n].fa.x/(2*m);
+		real xtemp = particles[n].r.x 
+		+ particles[n].vel.x*dt + dt*dt*particles[n].fa.x/(2*m);
 		//particles[n].r.x += 
 		//(D/T) * (ff).x * dt + (ww.x)
 	}
