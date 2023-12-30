@@ -26,7 +26,7 @@ typedef long double real;
 #define DO_PART for (n = 0; n < numParticles; n ++)
 
 typedef struct {
-    VecR r, rTest, fa, fb, r0, vel, rPrevious;
+    VecR r, rTest, fa, fb, r0, vel, rPast;
     int nPart;
     real radius;
     real pressure;
@@ -44,7 +44,7 @@ void InitMasses();
 // Initalization of variables
 
 vector<Particle> particles;
-real dt, D, timeNow, uSum, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, ekSum, f2Med, dduMed;
+real dt, D, timeNow, uSum, T, r0, V0, lambda, rmax, L, msd, rcut, P, sigmaxy, ekSum, f2Med, dduMed, eTot;
 int stepLimit, stepSample, stepCount, moreCycles;
 int numParticles; // Must have an even square - ex. 25, 36, and so on. Best use powers of 2
 unsigned seed;
@@ -67,8 +67,6 @@ int main(int argc, char **argv)
     cout << "Input lido" << endl;
     SetupJob();
     
-    cout << D << endl;
-    
     cout << "Setup finalizado. A executar o ciclo principal" << endl;
     PrintSummary();
     
@@ -86,9 +84,10 @@ int main(int argc, char **argv)
     
     cout << "Fim de execucao do programa" << endl;
     PrintElapsedTime(start);
-}
+} // End main
+// ****************************
 
-// *********
+// ****************************
 // Functions
 
 void SingleStep ()
@@ -98,6 +97,7 @@ void SingleStep ()
     
     if (ALGORITHM == "VERLET") {
 		computeForces(1);
+		VerletStep();
 	} 
 	else {
 		computeForces(1);
@@ -134,7 +134,6 @@ void SetupJob ()
 
 	InitMasses();
     
-    
     cout << "Workflow inicializado" << endl;
 }
 
@@ -144,13 +143,7 @@ void AllocArrays ()
 	cout << "Arrays allocados" << endl;
 }
 
-#define RStep(rinit, ff, ww) \
-	(rinit).x += (D/T) * (ff).x * dt + (ww.x), \
-	(rinit).y += (D/T) * (ff).y * dt + (ww.y)
-	
-#define GenerateNoise(ww, s) \
-	(ww).x = distribution(generator) * s, \
-	(ww).y = distribution(generator) * s
+
 
 void InitVelocities() {
 	int n;
@@ -163,7 +156,7 @@ void InitVelocities() {
 void InitMasses() {
 	int n;
 	DO_PART {
-		particles[n].mass = 1;
+		particles[n].mass = 1.0;
 	}
 }
 
@@ -180,12 +173,26 @@ void CBD_Step ()
 void VerletStep() {
 	int n;
 	ekSum = 0.0;
+	eTot = 0.0;
+	// uSum calcula-se na funcao computeForces
 	DO_PART {
-		real xtemp = particles[n].r.x 
-		+ particles[n].vel.x*dt + ( (particles[n].fa.x) / (2*m) ) * dt*dt;
-		//particles[n].r.x += 
-		//(D/T) * (ff).x * dt + (ww.x)
+		real xNext = 2*particles[n].r.x - particles[n].rPast.x + particles[n].fa.x*dt*dt/particles[n].mass;
+		real yNext = 2*particles[n].r.y - particles[n].rPast.y + particles[n].fa.y*dt*dt/particles[n].mass;
+		
+		particles[n].vel.x = (xNext - particles[n].rPast.x) / (2 * dt);
+		particles[n].vel.y = (yNext - particles[n].rPast.y) / (2 * dt);
+
+		real v2 = DotProd(particles[n].vel, particles[n].vel);
+
+		ekSum += 0.5 * particles[n].mass * v2;
+
+		particles[n].rPast.x = particles[n].r.x;
+		particles[n].rPast.y = particles[n].r.y;
+
+		particles[n].r.x = xNext;
+		particles[n].r.y = yNext;
 	}
+	eTot = ekSum + uSum;
 }
 
 void SRK_Step (int stage)
@@ -221,9 +228,6 @@ void SRK_Step (int stage)
 	}
 }
 
-#define GenRand01 \
-	(double)rand() / RAND_MAX
-	
 void InitCoords() {
 	real delta = L / (sqrt(numParticles));
 	int n = 0;
@@ -232,17 +236,17 @@ void InitCoords() {
 			particles[n].radius = r0, particles[n].nPart = n;
 			particles[n].r.x = ((real)i+0.5)*delta;
 			particles[n].r.y = ((real)j+0.5)*delta;
+			particles[n].rPast.x = particles[n].r.x;
+			particles[n].rPast.y = particles[n].r.y;
 			n++;
 		}
 	}
-	
 	n = 0;
 	DO_PART {
 		particles[n].r0.x = particles[n].r.x;
 		
 		particles[n].r0.y = particles[n].r.y;
 	}
-	
 	cout << "Fim da inicializacao das coordenadas" << endl;
 }
 
@@ -250,8 +254,8 @@ void Init_F ()
 {
     int n;
 	DO_PART {
-		VZero (particles[n].fa);
-		VZero (particles[n].fb);
+		VZero ( particles[n].fa );
+		VZero ( particles[n].fb );
 	};
 }
 
@@ -278,11 +282,9 @@ void PrintSummary ()
 		//if (y_img < 0 ) y_img += L;
 
 		ovito << x_img << "\t" <<  y_img << "\t" << part.radius << \
-		 "\t" << "3" << "\t" << part.nPart << "\t" << part.pressure  << "\t" << endl;
+		 "\t" << counter << "\t" << part.nPart << "\t" << part.pressure  << "\t" << endl;
     }
 }
-
-#define CNum(s, num) istringstream ( s ) >> num
 
 void ReadInput() {
 	cout << "A ler o input" << endl;
@@ -309,8 +311,6 @@ void ReadInput() {
 	CNum(config["L"], L); // Simulation domain lateral size
 	CNum(config["rcut"], rcut); // Cutoff radius
 	
-	//cout << D << endl;
-	
 	infile.close();
 	config.clear();
 	
@@ -318,14 +318,15 @@ void ReadInput() {
 }
 
 void writePropsHeader() {
-	propsDat << "t" << "\t" << "U" << "\t" << "P" << "\t" << "msd" << \
-	"\t" << "sigmaxy" << "\t" << "f2tdu2" << endl;
+	propsDat << "t" << "\t" << "u" << "\t" << "p" << "\t" << "msd" << \
+	"\t" << "sigmaxy" << "\t" << "f2" << "\t" << "ek" << "\t" << "e" << endl;
 }
 
 void writeProps() {
 	averageProps();
-	propsDat << timeNow << "\t" << (uSum) / (numParticles) << "\t" <<  P << "\t" << msd << \
-	"\t" << sigmaxy << "\t" << f2Med << endl;
+	propsDat << timeNow << "\t" << uSum / (real)numParticles << "\t" <<  P << "\t" << msd;
+	propsDat << "\t" << sigmaxy << "\t" << f2Med << "\t";
+	propsDat << ekSum / (real)numParticles << "\t" << eTot / (real)numParticles << endl;
 }
 
 void averageProps() {
@@ -375,7 +376,6 @@ void PrintElapsedTime(chrono::steady_clock::time_point start) {
 	tfile.close();
 }
 
-
 // ========================================================== //
 void computeForces(int in_stage) {                            //
 	int n, j, i;                                              //
@@ -403,7 +403,7 @@ void computeForces(int in_stage) {                            //
 		case 2:                                               //
 		{                                                     //
 			DO_PART {                                         //
-				VZero (particles[n].fb);                      //
+				VZero(particles[n].fb);                       //
 				particles[n].pressure = 0;                    //
 			}                                                 //
 			uSum = 0.;                                        //
@@ -419,13 +419,13 @@ void computeForces(int in_stage) {                            //
 }                                                             //
 // ========================================================== //
 
-// ========================================================
+// ===============================================================================
 void pairForce(Particle& par1, Particle& par2, int in_stage) {
 	VecR vec_dr, vec_f12, vec_n;
 	real F = 0.0;
 	real V, dr;
 	switch(in_stage) {
-		// ++++++++
+		// -----------------------------------------------------------------------
 		case 1:
 		{
 			GetVecDr(vec_dr, par1.r, par2.r);
@@ -448,23 +448,21 @@ void pairForce(Particle& par1, Particle& par2, int in_stage) {
 			AddForce(par2.fa, -vec_f12.x, -vec_f12.y);
 			
 			// Virial pressure
-			par1.pressure += DotProd(vec_f12, vec_dr); // Minus signs in force and dr cancel
-			par2.pressure += DotProd(vec_f12, vec_dr); // So that the pressure in both bodies is the same
+			// Minus signs in force and dr cancel
+			// So that the pressure in both bodies is the same
+			par1.pressure += DotProd(vec_f12, vec_dr); 
+			par2.pressure += DotProd(vec_f12, vec_dr); 
 			
 			sigmaxy +=  vec_dr.x * vec_f12.y / 4.0;
 			
-			// ATENCAO AQUI ISTO POSSIVELMENTE ESTA MAL EU ESTAVA A ESQUECER par2.ddu
-			// VERIFICAR ISTO
 			if (ALGORITHM != "VERLET") {
-				throw runtime_error("Verificar isto");
+				throw runtime_error("TODO Verificar isto");
 				par1.ddu += 0.5 * V * ( 2/(dr*dr) + 2*lambda/dr + lambda*lambda );
 				par2.ddu += 0.5 * V * ( 2/(dr*dr) + 2*lambda/dr + lambda*lambda );
 			}
-			
-			
 			break;
 		}
-		// ++++++++
+		// -----------------------------------------------------------------------
 		case 2: {
 			// GetVecDr(vec_dr, par1.R, par2.R);
 			ApplyPBC(vec_dr);
@@ -482,12 +480,14 @@ void pairForce(Particle& par1, Particle& par2, int in_stage) {
 			uSum += V;
 			GetVecF(vec_f12, F, vec_n);
 			
-			AddForce(par1.fb, vec_f12.x, vec_f12.y);
-			AddForce(par2.fb, -vec_f12.x, -vec_f12.y);
+			AddForce( par1.fb, vec_f12.x, vec_f12.y );
+			AddForce( par2.fb, -vec_f12.x, -vec_f12.y );
 			
 			// Virial pressure
-			par1.pressure += DotProd(vec_f12, vec_dr); // Or is it vec_n? I am almost sure it's vec_dr
-			par2.pressure += DotProd(vec_f12, vec_dr); // Minus signs in force and dr cancel
+			// Or is it vec_n? I am almost sure it's vec_dr
+			// Minus signs in force and dr cancel
+			par1.pressure += DotProd( vec_f12, vec_dr );
+			par2.pressure += DotProd( vec_f12, vec_dr );
 			
 			sigmaxy +=  vec_dr.x * vec_f12.y / 4.0;
 			
@@ -495,7 +495,8 @@ void pairForce(Particle& par1, Particle& par2, int in_stage) {
 			par2.ddu += 0.5 * V * ( 2/(dr*dr) + 2*lambda/dr + lambda*lambda );
 			
 			break;
-		}
-	} // end switch
-}
-// ========================================================
+		} // End case 2
+		// -----------------------------------------------------------------------
+	} // End switch
+} // End function
+// ===============================================================================

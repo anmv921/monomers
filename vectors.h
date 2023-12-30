@@ -17,7 +17,7 @@ typedef struct {
 	sqrt(x*x + y*y)
 	
 #define Norm(x, y) \
-	sqrt(y*y + y*y)
+	sqrt(x*x + y*y)
 	
 #define DotProd(v1, v2) \
 	(v1).x * (v2).x + (v1).y * (v2).y
@@ -55,6 +55,19 @@ typedef struct {
 #define GetVecF(VecF, FF, VecN) \
 	VecF.x = FF * VecN.x, \
 	VecF.y = FF * VecN.y
+
+#define CNum(s, num) istringstream ( s ) >> num
+
+#define GenRand01 \
+	(double)rand() / RAND_MAX
+
+#define RStep(rinit, ff, ww) \
+	(rinit).x += (D/T) * (ff).x * dt + (ww.x), \
+	(rinit).y += (D/T) * (ff).y * dt + (ww.y)
+	
+#define GenerateNoise(ww, s) \
+	(ww).x = distribution(generator) * s, \
+	(ww).y = distribution(generator) * s
 
 #endif
 
